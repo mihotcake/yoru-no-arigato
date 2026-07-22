@@ -304,7 +304,11 @@
   var $=function(s){return document.querySelector(s);};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s));};
 
-  function today(){ var d=new Date(); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+  // 日付は YYYYMMDD（スプレッドシートに日付変換されないよう固定桁の文字列）
+  function today(){ var d=new Date(); return ""+d.getFullYear()+("0"+(d.getMonth()+1)).slice(-2)+("0"+d.getDate()).slice(-2); }
+  function fmtDate(s){ s=String(s); return /^\d{8}$/.test(s) ? s.slice(0,4)+"/"+s.slice(4,6)+"/"+s.slice(6,8) : s; }
+  // 昼メモ同期先（Google Apps Script / 自分のスプレッドシート）
+  var SYNC_URL="https://script.google.com/macros/s/AKfycbx-7TzdM3ymSaeriiTisju17W3nEcdG5s9yKiOxNABSljH9H0Ag4BstqyLVv0aG7LCBqQ/exec";
   // 毎晩あたらしく。ただし同じ夜に開き直しても消えないよう、日付が同じ時だけ復元する
   function load(){ try{ var r=localStorage.getItem(STORE); if(r){ var o=JSON.parse(r); if(o && o.date===today() && o.gr && o.pr) return {gr:o.gr, pr:o.pr}; } }catch(e){} return {gr:["","",""], pr:["","",""]}; }
   function save(){ try{ localStorage.setItem(STORE, JSON.stringify({date:today(), gr:data.gr, pr:data.pr})); }catch(e){} }
@@ -336,7 +340,7 @@
     cur=n;
     $$(".step").forEach(function(el){ el.classList.toggle("show", +el.getAttribute("data-step")===n); });
     drawDots();
-    if(n===1) renderDayChips();
+    if(n===1){ renderDayChips(); syncPull(renderDayChips); }
     if(n===3) startBreath(); else stopBreath();
     if(n===4) fillReadback();
     if(n===5) fillAffirm();
@@ -436,7 +440,7 @@
   function showQuestions(){
     var arr=[]; try{ arr=JSON.parse(localStorage.getItem("yoru_questions_v1")||"[]"); }catch(e){}
     var body = arr.length
-      ? arr.slice().reverse().map(function(o){ return '<div class="qitem"><div class="qd">'+esc(o.date)+'</div><div class="qq">'+esc(o.q)+'</div></div>'; }).join("")
+      ? arr.slice().reverse().map(function(o){ return '<div class="qitem"><div class="qd">'+esc(fmtDate(o.date))+'</div><div class="qq">'+esc(o.q)+'</div></div>'; }).join("")
       : '<p class="sub">まだ ありません。<br>宇宙知性に問いを預けると、ここに たまっていきます。</p>';
     var ov=document.createElement("div"); ov.className="qmodal";
     ov.innerHTML='<div class="qcard"><h2 class="qh">🌌 これまで預けた問い</h2><div class="qlist">'+body+'</div><div class="qnav">'+(arr.length?'<button class="gacha" id="qcopy">コピー</button>':'')+'<button class="gacha" id="qclose">とじる</button></div></div>';
@@ -456,8 +460,32 @@
   function getDayMemos(){ try{ return JSON.parse(localStorage.getItem("yoru_daymemo_v1")||"[]"); }catch(e){ return []; } }
   function setDayMemos(a){ try{ localStorage.setItem("yoru_daymemo_v1", JSON.stringify(a)); }catch(e){} }
   function todaysMemos(){ return getDayMemos().filter(function(m){ return m.date===today(); }); }
-  function addDayMemo(text){ var a=getDayMemos(); a.push({id:String(Math.random()).slice(2)+"-"+a.length, date:today(), text:text}); setDayMemos(a); }
-  function delDayMemo(id){ setDayMemos(getDayMemos().filter(function(m){ return m.id!==id; })); }
+  function addDayMemo(text){ var a=getDayMemos(); a.push({id:String(Math.random()).slice(2)+"-"+a.length, date:today(), text:text}); setDayMemos(a); syncPush(); }
+  function delDayMemo(id){ setDayMemos(getDayMemos().filter(function(m){ return m.id!==id; })); syncPush(); }
+
+  // ---- Googleスプレッドシートと同期（昼どこでもメモ→夜iPad）----
+  function jsonp(url, cb){
+    var fn="__jsonp_"+Math.floor(Math.random()*1e9), s=document.createElement("script"), done=false;
+    window[fn]=function(data){ done=true; try{cb(data);}finally{ delete window[fn]; s.remove(); } };
+    s.onerror=function(){ if(!done){ delete window[fn]; s.remove(); cb(null); } };
+    s.src=url+(url.indexOf("?")<0?"?":"&")+"callback="+fn;
+    document.body.appendChild(s);
+  }
+  function syncPull(after){
+    if(!SYNC_URL){ if(after) after(); return; }
+    jsonp(SYNC_URL, function(remote){
+      if(Array.isArray(remote)){
+        var local=getDayMemos(), seen={}, merged=[];
+        remote.concat(local).forEach(function(m){ if(m&&m.id!=null&&!seen[m.id]){ seen[m.id]=1; merged.push({id:String(m.id), date:String(m.date), text:String(m.text)}); } });
+        setDayMemos(merged);
+      }
+      if(after) after();
+    });
+  }
+  function syncPush(){
+    if(!SYNC_URL) return;
+    try{ fetch(SYNC_URL, {method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(getDayMemos())}); }catch(e){}
+  }
 
   function renderDayChips(){
     var box=$("#grDay"), lab=$("#grDayLabel"); if(!box) return;
@@ -497,6 +525,7 @@
       addDayMemo(v); $("#dmInput").value=""; renderList(); $("#dmInput").focus();
     });
     renderList();
+    syncPull(renderList);
   }
   $("#dayMemoBtn").addEventListener("click", openDayMemo);
   $$(".medcard").forEach(function(c){ c.addEventListener("click",function(){ openPlayer(c.getAttribute("data-med")); }); });
@@ -559,6 +588,7 @@
   buildInputs($("#prA"),data.pr,["今日の自分をほめる ひとつめ…","ふたつめ…","みっつめ…"]);
   buildChips();
   setupAudio();
+  syncPull();
   show(0);
 })();
 </script>
