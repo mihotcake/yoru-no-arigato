@@ -114,6 +114,9 @@
   .daylink{align-self:center; margin-top:4px; font-family:var(--go); font-size:14px; color:var(--gold); background:transparent; border:1px solid var(--line); border-radius:999px; padding:11px 20px; cursor:pointer; transition:.2s;}
   .daylink:hover{background:rgba(230,185,128,.1); border-color:var(--gold-deep);}
   .daylink:focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+  .dmtype{display:flex; gap:8px;}
+  .dmt{flex:1; font-family:var(--go); font-size:13px; color:var(--ink-soft); background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:11px 6px; cursor:pointer; transition:.2s;}
+  .dmt.on{color:var(--gold); border-color:var(--gold-deep); background:rgba(230,185,128,.12);}
   .dmadd{display:flex; flex-direction:column; gap:10px;}
   .dmrow{display:flex; align-items:flex-start; gap:8px;}
   .dmrow .qq{flex:1;}
@@ -139,7 +142,7 @@
       <h1 class="big">おつかれさま。<br>今日も一日、ありがとう</h1>
       <p class="sub">ねむる前の数分で、今日の自分を<br>そっとねぎらって、感謝に浸ります。<br>そのまま瞑想で、ゆっくり眠りへ。</p>
       <div class="nav"><button class="go" data-next>はじめる</button></div>
-      <button class="daylink" id="dayMemoBtn">☀️ 昼の「ありがとう」をメモ</button>
+      <button class="daylink" id="dayMemoBtn">☀️ 昼のメモ（ありがとう / 自分ほめ）</button>
     </div>
 
     <!-- 1 感謝 -->
@@ -163,6 +166,8 @@
       <h1>今日の自分を<br>ほめること、ねぎらうこと</h1>
       <p class="sub">どんな小さなことでも。<br>あなたは、よくやっています。</p>
       <div class="field" id="prA"></div>
+      <div class="hintlabel" id="prDayLabel" style="display:none">✨ 昼にメモした「よくやった」（タップで入る）</div>
+      <div class="chips" id="prDay"></div>
       <div class="hintlabel">タップで そのまま入れられます</div>
       <div class="chips" id="prExamples"></div>
       <div class="hintlabel">親友が同じことをしてたら、どう褒める？ その言葉を自分に。語尾もどうぞ</div>
@@ -341,6 +346,7 @@
     $$(".step").forEach(function(el){ el.classList.toggle("show", +el.getAttribute("data-step")===n); });
     drawDots();
     if(n===1){ renderDayChips(); syncPull(renderDayChips); }
+    if(n===2){ renderPraiseChips(); syncPull(renderPraiseChips); }
     if(n===3) startBreath(); else stopBreath();
     if(n===4) fillReadback();
     if(n===5) fillAffirm();
@@ -460,7 +466,8 @@
   function getDayMemos(){ try{ return JSON.parse(localStorage.getItem("yoru_daymemo_v1")||"[]"); }catch(e){ return []; } }
   function setDayMemos(a){ try{ localStorage.setItem("yoru_daymemo_v1", JSON.stringify(a)); }catch(e){} }
   function todaysMemos(){ return getDayMemos().filter(function(m){ return m.date===today(); }); }
-  function addDayMemo(text){ var a=getDayMemos(); a.push({id:String(Math.random()).slice(2)+"-"+a.length, date:today(), text:text}); setDayMemos(a); syncPush(); }
+  function memoType(m){ return String(m && m.id || "").split("_")[0]==="pr" ? "pr" : "gr"; }
+  function addDayMemo(text, type){ type=(type==="pr"?"pr":"gr"); var a=getDayMemos(); a.push({id:type+"_"+String(Math.random()).slice(2)+"-"+a.length, date:today(), text:text}); setDayMemos(a); syncPush(); }
   function delDayMemo(id){ setDayMemos(getDayMemos().filter(function(m){ return m.id!==id; })); syncPush(); }
 
   // ---- Googleスプレッドシートと同期（昼どこでもメモ→夜iPad）----
@@ -489,19 +496,28 @@
 
   function renderDayChips(){
     var box=$("#grDay"), lab=$("#grDayLabel"); if(!box) return;
-    var mems=todaysMemos(); box.innerHTML="";
+    var mems=todaysMemos().filter(function(m){ return memoType(m)==="gr"; }); box.innerHTML="";
     if(!mems.length){ lab.style.display="none"; return; }
     lab.style.display="";
     mems.forEach(function(m){ var c=document.createElement("button"); c.className="chip ex"; c.textContent="☀️ "+m.text;
       c.addEventListener("click",function(){ fillLine($("#grA"), m.text); }); box.appendChild(c); });
   }
+  function renderPraiseChips(){
+    var box=$("#prDay"), lab=$("#prDayLabel"); if(!box) return;
+    var mems=todaysMemos().filter(function(m){ return memoType(m)==="pr"; }); box.innerHTML="";
+    if(!mems.length){ lab.style.display="none"; return; }
+    lab.style.display="";
+    mems.forEach(function(m){ var c=document.createElement("button"); c.className="chip ex"; c.textContent="✨ "+m.text;
+      c.addEventListener("click",function(){ fillLine($("#prA"), m.text); }); box.appendChild(c); });
+  }
 
   function openDayMemo(){
     var ov=document.createElement("div"); ov.className="qmodal";
     ov.innerHTML='<div class="qcard">'
-      +'<h2 class="qh">☀️ 昼の「ありがとう」</h2>'
-      +'<p class="sub" style="margin:0">その瞬間の ありがたさを、ここにメモ。<br>夜の感謝で、そのまま使えます。</p>'
-      +'<div class="dmadd"><textarea id="dmInput" rows="2" placeholder="いま、ありがたかったこと…（声でもOK）"></textarea>'
+      +'<h2 class="qh">☀️ 昼のメモ</h2>'
+      +'<p class="sub" style="margin:0">その瞬間の「ありがたい」や「よくやった」を。<br>夜、それぞれの場所で使えます。</p>'
+      +'<div class="dmtype"><button class="dmt on" data-t="gr">☀️ ありがたいこと</button><button class="dmt" data-t="pr">✨ よくやった自分</button></div>'
+      +'<div class="dmadd"><textarea id="dmInput" rows="2" placeholder="いま、感じたこと…（声でもOK）"></textarea>'
       +'<button class="go" id="dmAdd">＋ メモする</button></div>'
       +'<div class="qlist" id="dmList"></div>'
       +'<div class="qnav"><button class="gacha" id="dmClose">とじる</button></div>'
@@ -509,12 +525,18 @@
     document.body.appendChild(ov);
     ov.addEventListener("click",function(e){ if(e.target===ov) ov.remove(); });
     $("#dmClose").addEventListener("click",function(){ ov.remove(); });
+    var curType="gr";
+    ov.querySelectorAll(".dmt").forEach(function(b){ b.addEventListener("click",function(){
+      curType=b.getAttribute("data-t");
+      ov.querySelectorAll(".dmt").forEach(function(x){ x.classList.toggle("on", x===b); });
+      $("#dmInput").focus();
+    }); });
     function renderList(){
       var list=$("#dmList"); var mems=todaysMemos();
       list.innerHTML = mems.length ? "" : '<p class="sub" style="font-size:13px; margin:0">まだ ありません</p>';
       mems.forEach(function(m){
         var row=document.createElement("div"); row.className="qitem dmrow";
-        row.innerHTML='<div class="qq">'+esc(m.text)+'</div>';
+        row.innerHTML='<div class="qq">'+(memoType(m)==="pr"?"✨ ":"☀️ ")+esc(m.text)+'</div>';
         var del=document.createElement("button"); del.className="dmdel"; del.textContent="×"; del.setAttribute("aria-label","消す");
         del.addEventListener("click",function(){ delDayMemo(m.id); renderList(); });
         row.appendChild(del); list.appendChild(row);
@@ -522,7 +544,7 @@
     }
     $("#dmAdd").addEventListener("click",function(){
       var v=$("#dmInput").value.trim(); if(!v) return;
-      addDayMemo(v); $("#dmInput").value=""; renderList(); $("#dmInput").focus();
+      addDayMemo(v, curType); $("#dmInput").value=""; renderList(); $("#dmInput").focus();
     });
     renderList();
     syncPull(renderList);
