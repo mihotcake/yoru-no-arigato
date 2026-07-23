@@ -389,7 +389,8 @@
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s));};
 
   // 日付は YYYYMMDD（スプレッドシートに日付変換されないよう固定桁の文字列）
-  function today(){ var d=new Date(); return ""+d.getFullYear()+("0"+(d.getMonth()+1)).slice(-2)+("0"+d.getDate()).slice(-2); }
+  // 一日の区切りは深夜3時。0〜3時に開いても「その日」あつかい＝夜ふけでも昼メモ・入力が消えない
+  function today(){ var d=new Date(); d.setHours(d.getHours()-3); return ""+d.getFullYear()+("0"+(d.getMonth()+1)).slice(-2)+("0"+d.getDate()).slice(-2); }
   function fmtDate(s){ s=String(s); return /^\d{8}$/.test(s) ? s.slice(0,4)+"/"+s.slice(4,6)+"/"+s.slice(6,8) : s; }
   // 昼メモ同期先（Google Apps Script / 自分のスプレッドシート）
   var SYNC_URL="https://script.google.com/macros/s/AKfycbx-7TzdM3ymSaeriiTisju17W3nEcdG5s9yKiOxNABSljH9H0Ag4BstqyLVv0aG7LCBqQ/exec";
