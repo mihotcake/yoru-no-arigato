@@ -240,7 +240,9 @@
       <p class="sub">感謝で満ちた いまの状態で。<br>聞いてみたいこと 相談したいことを、<br>声に出しても 書いても。そして 手放す。</p>
       <div class="field" id="askBox">
         <textarea id="askInput" rows="2" placeholder="今、宇宙知性に 聞いてみたいこと…"></textarea>
-        <div class="mic">🎙 キーボードのマイクで声にしても、ただ声に出すだけでもOK</div>
+        <div class="mic">🎙 声でも文字でもOK</div>
+        <div class="hintlabel">思いつかない日は、選ぶだけ・とばすのもOK</div>
+        <div class="chips" id="askChips"></div>
       </div>
       <div class="askdone" id="askDone"></div>
       <div class="nav">
@@ -328,7 +330,7 @@
       <div class="nav"><button class="prev" data-goto="33">もどる</button><button class="go" data-goto="9">いってらっしゃい、わたし</button></div>
     </div>
 
-    <div class="foot"><button id="showQ">🌌 預けた問い</button> · <button id="reset">今日の入力を消す</button></div>
+    <div class="foot"><button id="goHome">🏠 最初にもどる</button> · <button id="showQ">🌌 預けた問い</button> · <button id="reset">今日の入力を消す</button></div>
   </div>
 </div>
 
@@ -349,14 +351,25 @@
   var data=load();
 
   var GR_EXAMPLES=[
-    "今日も朝、目を開けられて ありがたい",
-    "心臓が今日も動いてくれて ありがたい",
-    "あたたかいお布団で眠れて ありがたい",
-    "蛇口をひねると きれいな水が出て ありがたい",
-    "ごはんが食べられて ありがたい",
-    "屋根のある家で過ごせて ありがたい",
-    "スマホで好きな動画が見られて ありがたい",
-    "今日も無事に一日を過ごせて ありがたい"
+    "あたたかい飲みものが おいしかった",
+    "ぐっすり眠れて うれしい",
+    "好きな音楽が聴けて 幸せ",
+    "ごはんが おいしかった",
+    "お風呂で ほっとできた",
+    "誰かと 笑いあえた",
+    "空がきれいで 気持ちよかった",
+    "ちょっと ゆっくりできた時間",
+    "スマホでさっと 調べられて 助かった",
+    "今日も 元気に過ごせた"
+  ];
+  var ASK_EXAMPLES=[
+    "今、私が いちばん大切にしたいことは？",
+    "この出来事から、何を学べる？",
+    "明日、どんな一歩を ふみ出せばいい？",
+    "今、私が 手放していいことは？",
+    "どうすれば もっと ハートをひらいていられる？",
+    "私にとっての、次の光は？",
+    "本当は 私は どうしたい？"
   ];
   var GR_HINTS=["水道","電気","スマホ","お布団","体","ごはん","家族","屋根"];
   var PR_EXAMPLES=[
@@ -514,7 +527,7 @@
   $$("[data-prev]").forEach(function(b){ b.addEventListener("click",function(){ if(cur===8) show(7); else if(cur>0) show(cur-1); }); });
 
   // ---- 宇宙知性に預ける ----
-  function resetAsk(){ $("#askBox").style.display=""; $("#askSubmit").style.display=""; $("#askNext").style.display="none"; var d=$("#askDone"); d.className="askdone"; d.innerHTML=""; }
+  function resetAsk(){ var inp=$("#askInput"); if(inp) inp.value=""; $("#askBox").style.display=""; $("#askSubmit").style.display=""; $("#askNext").style.display="none"; var d=$("#askDone"); d.className="askdone"; d.innerHTML=""; }
   function saveQuestion(q){ try{ var K="yoru_questions_v1"; var arr=JSON.parse(localStorage.getItem(K)||"[]"); arr.push({date:today(), q:q}); localStorage.setItem(K, JSON.stringify(arr)); }catch(e){} }
   $("#askSubmit").addEventListener("click",function(){
     var q=$("#askInput").value.trim();
@@ -635,6 +648,11 @@
     syncPull(renderList);
   }
   $("#dayMemoBtn").addEventListener("click", openDayMemo);
+  $("#goHome").addEventListener("click", function(){ show(9); });
+  (function(){ var box=$("#askChips"); if(!box) return; box.innerHTML="";
+    ASK_EXAMPLES.forEach(function(s){ var c=document.createElement("button"); c.className="chip ex"; c.textContent=s;
+      c.addEventListener("click",function(){ var t=$("#askInput"); t.value=s; t.focus(); }); box.appendChild(c); });
+  })();
   $$(".medcard").forEach(function(c){ c.addEventListener("click",function(){ openPlayer(c.getAttribute("data-med")); }); });
 
   $("#reset").addEventListener("click",function(){
