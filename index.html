@@ -199,8 +199,6 @@
       <div class="chips" id="prDay"></div>
       <div class="hintlabel">タップで そのまま入れられます</div>
       <div class="chips" id="prExamples"></div>
-      <div class="hintlabel">親友が同じことをしてたら、どう褒める？ その言葉を自分に。語尾もどうぞ</div>
-      <div class="chips" id="prSuffix"></div>
       <div class="nav"><button class="prev" data-prev>もどる</button><button class="go" data-next>つぎへ</button></div>
     </div>
 
@@ -385,7 +383,6 @@
     "無理せず休むことを選べた私、えらい！",
     "生きてるだけで、今日も花丸、100点！"
   ];
-  var PR_SUFFIX=["〜した私、えらい！","〜した私、最高！","〜した私、よくやった！","〜を選んだ私、素晴らしい！"];
   var AFFIRM=[
     "今日も一日、美しい世界を見させていただき、ありがとうございました",
     "今日も一日、私の役割を、務めさせていただきました",
@@ -676,16 +673,6 @@
   function buildChips(){
     exampleChips("#grExamples", GR_EXAMPLES, "#grA");
     exampleChips("#prExamples", PR_EXAMPLES, "#prA");
-    var ps=$("#prSuffix"); ps.innerHTML="";
-    PR_SUFFIX.forEach(function(sfx){
-      var c=document.createElement("button"); c.className="chip"; c.textContent=sfx;
-      c.addEventListener("click",function(){
-        var ta=firstEmpty($("#prA")); var base=ta.value.replace(/[、。！]*$/,"").replace(/^〜/,"");
-        ta.value=(base?base:"")+ sfx.replace("〜","");
-        ta.dispatchEvent(new Event("input")); ta.focus();
-      });
-      ps.appendChild(c);
-    });
   }
 
   // ---- あさ（朝のルーティン）----
