@@ -186,8 +186,6 @@
       <div class="chips" id="grDay"></div>
       <div class="hintlabel">タップで そのまま入れられます</div>
       <div class="chips" id="grExamples"></div>
-      <div class="hintlabel">思いつかないときは —— もし、これが無かったら？</div>
-      <div class="chips" id="grHints"></div>
       <div class="nav"><button class="prev" data-prev>もどる</button><button class="go" data-next>つぎへ</button></div>
     </div>
 
@@ -374,7 +372,6 @@
     "私にとっての、次の光は？",
     "本当は 私は どうしたい？"
   ];
-  var GR_HINTS=["水道","電気","スマホ","お布団","体","ごはん","家族","屋根"];
   var PR_EXAMPLES=[
     "朝起きた私、ほんとすごい！",
     "お風呂に入って歯を磨けた私、すごい！",
@@ -679,15 +676,6 @@
   function buildChips(){
     exampleChips("#grExamples", GR_EXAMPLES, "#grA");
     exampleChips("#prExamples", PR_EXAMPLES, "#prA");
-    var gh=$("#grHints"); gh.innerHTML="";
-    GR_HINTS.forEach(function(w){
-      var c=document.createElement("button"); c.className="chip"; c.textContent="もし "+w+" が無かったら？";
-      c.addEventListener("click",function(){
-        var ta=firstEmpty($("#grA")); ta.value=(ta.value?ta.value:"")+ (ta.value? "":"") + w+"があって、ありがたい";
-        ta.dispatchEvent(new Event("input")); ta.focus();
-      });
-      gh.appendChild(c);
-    });
     var ps=$("#prSuffix"); ps.innerHTML="";
     PR_SUFFIX.forEach(function(sfx){
       var c=document.createElement("button"); c.className="chip"; c.textContent=sfx;
