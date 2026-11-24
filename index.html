@@ -495,6 +495,16 @@
   var AU={jihi:null,kansha:null}, curAu=null;
   function setupAudio(){
     AU.jihi=$("#au-jihi"); AU.kansha=$("#au-kansha");
+    // iOSの新しいSafariは大きな埋め込み音声(data:)の再生に失敗することがある → Blob URLに読み替える
+    try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(e){}
+    [AU.jihi,AU.kansha].forEach(function(a){
+      try{
+        var s=a&&a.getAttribute("src"); if(!s||s.indexOf("data:")!==0) return;
+        var i=s.indexOf(","), mime=s.slice(5,s.indexOf(";")), bin=atob(s.slice(i+1));
+        var u=new Uint8Array(bin.length); for(var j=0;j<bin.length;j++) u[j]=bin.charCodeAt(j);
+        a.src=URL.createObjectURL(new Blob([u],{type:mime})); a.load();
+      }catch(e){}
+    });
     [AU.jihi,AU.kansha].forEach(function(a){ if(a) a.addEventListener("ended",function(){ var o=$("#playOrb"); o.classList.remove("playing"); o.textContent="▶"; relWake(); }); });
   }
   // 画面ロックで音が止まらないよう、再生中は画面を起こしたままにする（放置で寝落ちOK）
@@ -516,7 +526,8 @@
   }
   $("#playOrb").addEventListener("click",function(){
     if(!curAu){ orbState(!this.classList.contains("playing")); return; }
-    if(curAu.paused){ curAu.play(); orbState(true); reqWake(); } else { curAu.pause(); orbState(false); relWake(); }
+    if(curAu.paused){ var p=curAu.play(); orbState(true); reqWake();
+      if(p&&p.catch) p.catch(function(){ try{ curAu.load(); curAu.play().then(function(){ orbState(true); }).catch(function(){ orbState(false); }); }catch(e){ orbState(false); } }); } else { curAu.pause(); orbState(false); relWake(); }
   });
   $("#sleepBtn").addEventListener("click",function(){ $("#sleep").classList.add("show"); });
   $("#sleep").addEventListener("click",function(){ this.classList.remove("show"); });
